@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Call list</title>
+  <style>
+    :root {
+      --bg: #f3f6f7;
+      --card: #ffffff;
+      --ink: #14262b;
+      --muted: #52666c;
+      --line: #d9e2e5;
+      --accent: #0b6e75;
+    }
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+      line-height: 1.5;
+    }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 20px 16px 40px; }
+    h1 { font-size: 1.5rem; margin: 0 0 2px; }
+    .sub { color: var(--muted); margin: 0 0 16px; font-size: .95rem; }
+
+    .search {
+      position: sticky; top: 0; z-index: 1;
+      background: var(--bg); padding: 8px 0 12px;
+    }
+    .search label {
+      position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);
+    }
+    .search input {
+      width: 100%; min-height: 48px; padding: 10px 14px;
+      font: inherit; font-size: 16px; /* 16px stops iOS zooming in */
+      border: 1.5px solid var(--line); border-radius: 10px; background: #fff; color: var(--ink);
+    }
+    .search input:focus-visible, button:focus-visible {
+      outline: 3px solid var(--accent); outline-offset: 2px;
+    }
+
+    ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+    .card {
+      background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+      padding: 14px 16px; overflow-wrap: anywhere; /* long names never overflow */
+    }
+    .top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; }
+    .name { font-size: 1.05rem; font-weight: 650; margin: 0; }
+    .name.unknown { font-weight: 500; font-style: italic; color: var(--muted); }
+
+    .badge {
+      display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;
+      padding: 3px 10px; border-radius: 999px; font-size: .85rem; font-weight: 600;
+    }
+    .answered  { background: #dff3e7; color: #0d5a31; }
+    .failed    { background: #fde4e4; color: #8f1a1a; }
+    .no_answer { background: #fdeccc; color: #7a4300; }
+    .other     { background: #e6ecee; color: #33474d; }
+
+    .meta { color: var(--muted); font-size: .92rem; margin: 4px 0 0; }
+    .summary { margin: 8px 0 0; }
+    .summary.none { color: var(--muted); font-style: italic; }
+    .summary.clamped {
+      display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .more {
+      margin-top: 4px; min-height: 44px; padding: 0 4px; background: none; border: 0;
+      font: inherit; font-weight: 600; color: var(--accent); cursor: pointer; text-decoration: underline;
+    }
+
+    .empty {
+      text-align: center; background: var(--card); border: 1px dashed var(--line);
+      border-radius: 12px; padding: 32px 16px;
+    }
+    .empty p { margin: 0 0 12px; }
+    .empty button {
+      min-height: 44px; padding: 0 20px; font: inherit; font-weight: 600; cursor: pointer;
+      background: var(--accent); color: #fff; border: 0; border-radius: 10px;
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <h1>Call list</h1>
+    <p class="sub" id="count" aria-live="polite"></p>
+
+    <div class="search">
+      <label for="q">Search calls by name</label>
+      <input id="q" type="search" placeholder="Search by name" autocomplete="off">
+    </div>
+
+    <ul id="list"></ul>
+    <div id="empty" class="empty" hidden>
+      <p id="emptyMsg"></p>
+      <button type="button" id="clear">Clear search</button>
+    </div>
+  </main>
+
+  <script>
+    // Data exactly as the server sends it
+    const rawCalls = [
+      {"id": 1, "name": "Anita Sharma", "status": "answered", "duration_secs": 137, "summary": "Booked a follow-up for Friday."},
+      {"id": 2, "name": "Rahul Shah", "status": "failed", "duration_secs": 0, "summary": ""},
+      {"id": 3, "name": null, "status": "answered", "duration_secs": 64, "summary": "Asked about clinic timings."},
+      {"id": 4, "name": "Mohammed Irfan Abdul Rahman Siddiqui", "status": "answered", "duration_secs": 3725, "summary": "Called about his mother's knee surgery. Wanted to know the cost, how many days she would stay, whether insurance is accepted, what to bring on the day, and if the doctor could call him back personally before he decides. Asked the same questions again for his father."},
+      {"id": 5, "name": "priya nair", "status": "no_answer", "duration_secs": 0, "summary": ""},
+      {"id": 6, "name": "Deepak Verma", "status": "answered", "duration_secs": 212, "summary": "Said the doctor was <b>very</b> helpful."},
+      {"id": 7, "name": "Sunita Rao", "status": "answered", "duration_secs": 59, "summary": "Rescheduled to Monday."},
+      {"id": 7, "name": "Sunita Rao", "status": "answered", "duration_secs": 59, "summary": "Rescheduled to Monday."}
+    ];
+
+    const STATUS = {
+      answered:  { label: "Answered",  icon: "✓" },
+      failed:    { label: "Failed",    icon: "✕" },
+      no_answer: { label: "No answer", icon: "–" }
+    };
+
+    // 1. Remove duplicates: the same id is the same call
+    const seen = new Set();
+    const calls = rawCalls.filter(c => !seen.has(c.id) && seen.add(c.id));
+
+    // 2. Display helpers
+    function displayName(name) {
+      const n = (name || "").trim();
+      if (!n) return null;                       // null / empty -> handled as "Unknown caller"
+      return n === n.toLowerCase()               // only fix all-lowercase names
+        ? n.replace(/\b\p{L}/gu, ch => ch.toUpperCase())
+        : n;
+    }
+
+    function formatDuration(secs) {
+      if (!secs || secs <= 0) return "Not connected";
+      const h = Math.floor(secs / 3600);
+      const m = Math.floor((secs % 3600) / 60);
+      const s = secs % 60;
+      return [h && h + "h", m && m + "m", s && s + "s"].filter(Boolean).join(" ");
+    }
+
+    function statusInfo(status) {
+      if (STATUS[status]) return { ...STATUS[status], cls: status };
+      const text = String(status || "Unknown").replace(/_/g, " ");
+      return { label: text.charAt(0).toUpperCase() + text.slice(1), icon: "?", cls: "other" };
+    }
+
+    // 3. Build cards with textContent (never innerHTML), so summaries are shown as plain text
+    function el(tag, className, text) {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (text !== undefined) node.textContent = text;
+      return node;
+    }
+
+    function buildCard(call) {
+      const li = el("li", "card");
+      const name = displayName(call.name);
+
+      const top = el("div", "top");
+      top.appendChild(el("h2", "name" + (name ? "" : " unknown"), name || "Unknown caller"));
+      const st = statusInfo(call.status);
+      top.appendChild(el("span", "badge " + st.cls, st.icon + " " + st.label));
+      li.appendChild(top);
+
+      li.appendChild(el("p", "meta", "Length: " + formatDuration(call.duration_secs)));
+
+      const text = (call.summary || "").trim();
+      if (!text) {
+        li.appendChild(el("p", "summary none", "No summary"));
+      } else {
+        const p = el("p", "summary", text);
+        li.appendChild(p);
+        if (text.length > 140) {
+          p.classList.add("clamped");
+          const btn = el("button", "more", "Read more");
+          btn.type = "button";
+          btn.setAttribute("aria-expanded", "false");
+          btn.addEventListener("click", () => {
+            const open = p.classList.toggle("clamped") === false;
+            btn.textContent = open ? "Show less" : "Read more";
+            btn.setAttribute("aria-expanded", String(open));
+          });
+          li.appendChild(btn);
+        }
+      }
+      return li;
+    }
+
+    // 4. Render and search (case-insensitive, safe with null names)
+    const listEl = document.getElementById("list");
+    const emptyEl = document.getElementById("empty");
+    const countEl = document.getElementById("count");
+    const input = document.getElementById("q");
+
+    function render() {
+      const q = input.value.trim().toLowerCase();
+      const shown = calls.filter(c => (displayName(c.name) || "Unknown caller").toLowerCase().includes(q));
+
+      listEl.replaceChildren(...shown.map(buildCard));
+      const none = shown.length === 0;
+      emptyEl.hidden = !none;
+      listEl.hidden = none;
+      if (none) document.getElementById("emptyMsg").textContent = `No calls found for "${input.value.trim()}".`;
+      countEl.textContent = q
+        ? `Showing ${shown.length} of ${calls.length} calls`
+        : `${calls.length} calls`;
+    }
+
+    input.addEventListener("input", render);
+    document.getElementById("clear").addEventListener("click", () => { input.value = ""; render(); input.focus(); });
+    render();
+  </script>
+</body>
+</html>

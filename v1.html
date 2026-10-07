@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Call List</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+    h1 { text-align: center; }
+    #search { width: 100%; padding: 10px; font-size: 14px; margin-bottom: 20px; box-sizing: border-box; }
+    .call { background: white; padding: 15px; margin-bottom: 10px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+    .name { font-size: 18px; font-weight: bold; }
+    .status { display: inline-block; padding: 3px 8px; border-radius: 4px; color: white; font-size: 12px; margin: 5px 0; }
+    .answered { background: green; }
+    .failed { background: red; }
+    .no_answer { background: orange; }
+    .duration { color: #555; }
+    .summary { margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <h1>Call List</h1>
+  <input type="text" id="search" placeholder="Search by name...">
+  <div id="list"></div>
+
+  <script>
+    const calls = [
+      {"id": 1, "name": "Anita Sharma", "status": "answered", "duration_secs": 137, "summary": "Booked a follow-up for Friday."},
+      {"id": 2, "name": "Rahul Shah", "status": "failed", "duration_secs": 0, "summary": ""},
+      {"id": 3, "name": null, "status": "answered", "duration_secs": 64, "summary": "Asked about clinic timings."},
+      {"id": 4, "name": "Mohammed Irfan Abdul Rahman Siddiqui", "status": "answered", "duration_secs": 3725, "summary": "Called about his mother's knee surgery. Wanted to know the cost, how many days she would stay, whether insurance is accepted, what to bring on the day, and if the doctor could call him back personally before he decides. Asked the same questions again for his father."},
+      {"id": 5, "name": "priya nair", "status": "no_answer", "duration_secs": 0, "summary": ""},
+      {"id": 6, "name": "Deepak Verma", "status": "answered", "duration_secs": 212, "summary": "Said the doctor was <b>very</b> helpful."},
+      {"id": 7, "name": "Sunita Rao", "status": "answered", "duration_secs": 59, "summary": "Rescheduled to Monday."},
+      {"id": 7, "name": "Sunita Rao", "status": "answered", "duration_secs": 59, "summary": "Rescheduled to Monday."}
+    ];
+
+    function render(list) {
+      const container = document.getElementById('list');
+      container.innerHTML = '';
+      list.forEach(call => {
+        container.innerHTML += `
+          <div class="call">
+            <div class="name">${call.name}</div>
+            <span class="status ${call.status}">${call.status}</span>
+            <div class="duration">${call.duration_secs} secs</div>
+            <div class="summary">${call.summary}</div>
+          </div>`;
+      });
+    }
+
+    document.getElementById('search').addEventListener('input', function (e) {
+      const q = e.target.value.toLowerCase();
+      render(calls.filter(c => c.name.toLowerCase().includes(q)));
+    });
+
+    render(calls);
+  </script>
+</body>
+</html>
