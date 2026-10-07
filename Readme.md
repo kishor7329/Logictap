@@ -103,7 +103,7 @@ Clinic owners are most likely to check this between patients, on a phone.
 
 | Long name, expanded summary | Searching "unknown" (null name handled) |
 |---|---|
-| ![Long name](screenshots/final-long-name.png) | ![Unknown caller](screenshots/final-unknown.png)|
+| ![Long name](screenshots/final-long-name.png) | ![Unknown caller](screenshots/final-unkown.png)|
 
 ## 8. Prompts used
 
